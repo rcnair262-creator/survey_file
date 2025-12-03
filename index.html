@@ -1,167 +1,155 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Election Survey</title>
+  <title>Election Survey System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="data:,">
 
-  <!-- ✅ DESKTOP-SAFE TRANSLITERATION LIBRARY -->
   <script src="https://unpkg.com/sanscript@1.2.2/sanscript.min.js"></script>
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #eef2f3;
-      padding: 20px;
-    }
-    .box {
-      background: #fff;
-      padding: 20px;
-      max-width: 900px;
-      margin: auto;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #ccc;
-    }
-    h2 { text-align: center; }
+    body { font-family: Arial; background: #eef2f3; padding: 20px; }
+    .box { background: #fff; padding: 20px; max-width: 1000px; margin: auto; border-radius: 10px; }
+    input, select, button { width: 100%; padding: 10px; margin: 7px 0; }
+    button { background: #2b7cff; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    button.red { background: #d43b3b; }
+    hr { border: 1px dashed #aaa; margin: 10px 0; }
 
-    input, select, button {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
-      font-size: 15px;
-    }
-
-    button {
-      background: #2b7cff;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    button.red {
-      background: #d93b3b;
-    }
-
-    hr {
-      border: 1px dashed #999;
-      margin: 12px 0;
-    }
-
-    .lang-btn {
-      padding: 6px 16px;
-      font-size: 14px;
-      background: #777;
-      color: white;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      margin: 0 5px;
-      width: auto;
-    }
-
-    .lang-btn.active {
-      background: #2b7cff;
-    }
-
-    .lang-bar {
-      text-align: center;
-      margin-bottom: 10px;
-    }
+    table { width: 100%; border-collapse: collapse; }
+    table, th, td { border: 1px solid #999; }
+    th, td { padding: 7px; text-align: center; }
+    th { background: #eee; }
   </style>
 </head>
 <body>
 
-<!-- ✅ GLOBAL LANGUAGE SWITCH -->
-<div class="lang-bar">
-  <button type="button" id="langEN" class="lang-btn active" onclick="setGlobalLang('en')">EN</button>
-  <button type="button" id="langML" class="lang-btn" onclick="setGlobalLang('ml')">മലയാളം</button>
+<div class="box" id="dashboard">
+  <h2>Cluster Dashboard</h2>
+
+  <button onclick="loadFiles()">🔄 Load Existing Files</button>
+  <select id="fileList"></select>
+  <button onclick="selectFile()">✅ Open Selected File</button>
+
+  <hr>
+
+  <h3>Create New Cluster</h3>
+  <input id="newCluster" placeholder="Cluster Name">
+  <button onclick="createNewCluster()">➕ Create New File</button>
+
+  <hr>
+
+  <button onclick="openFilter()">🔎 Advanced Filter</button>
 </div>
 
-<!-- ================= CLUSTER PAGE ================= -->
-<div class="box" id="clusterBox">
-
-  <h2>Create New Cluster (New File)</h2>
-
-  <label>Cluster / File Name</label>
-  <input id="clusterName" type="text">
-
-  <label>Description</label>
-  <input id="description" type="text">
-
-  <button onclick="createCluster()">Create Cluster</button>
-
-  <p id="clusterStatus"></p>
-
-</div>
-
-<!-- ================= FAMILY PAGE ================= -->
 <div class="box" id="familyBox" style="display:none;">
 
-  <h2>Enter Family Data</h2>
+  <h2>Family Entry</h2>
 
   <label>House Name</label>
-  <input id="house" type="text">
+  <input id="house">
 
-  <label>Eligible Members Count</label>
+  <label>Eligible Members</label>
   <input type="number" id="count" onchange="createMembers()">
 
-  <label>SL No (Auto)</label>
-  <input id="slno" readonly style="background:#ffe;">
+  <label>SL No</label>
+  <input id="slno" readonly>
 
   <div id="members"></div>
 
-  <button onclick="saveFamily()">Save Family (LIVE)</button>
-  <button class="red" onclick="finishCluster()">Finish Cluster</button>
+  <button onclick="saveFamily()">💾 Save Family</button>
+  <button class="red" onclick="backToDashboard()">⬅ Back</button>
 
 </div>
 
-<script>
-let autoSL = 1;
-let currentSheetId = "";
+<div class="box" id="filterBox" style="display:none;">
+  <h2>Advanced Filter</h2>
 
-/* ✅ PASTE YOUR REAL GOOGLE WEB APP URL BELOW */
+  <input id="fHouse" placeholder="House (optional)">
+
+  <select id="fReligion">
+    <option value="">Any Religion</option>
+    <option>Hindu</option>
+    <option>Muslim</option>
+    <option>Christian</option>
+    <option>Others</option>
+  </select>
+
+  <select id="fParty">
+    <option value="">Any Party</option>
+    <option>NDA</option>
+    <option>UDF</option>
+    <option>LDF</option>
+    <option>OTH</option>
+  </select>
+
+  <select id="fActive">
+    <option value="">Any Status</option>
+    <option>Active</option>
+    <option>Not Active</option>
+  </select>
+
+  <button onclick="applyFilter()">🔍 Apply Filter</button>
+  <button class="red" onclick="backToDashboard()">⬅ Back</button>
+
+  <hr>
+  <div id="filterResults"></div>
+</div>
+
+<script>
 const LIVE_URL = "https://script.google.com/macros/s/AKfycbwOTke0ecgM4IY2BpL1lVXq1sSAFtyHmelZROpigysxuac4xEpva31c22IzwAjnE-s8/exec";
 
-/* ================= GLOBAL LANGUAGE SWITCH ================= */
-let currentLang = "en";
+let currentSheetId = "";
+let autoSL = 1;
 
-function setGlobalLang(lang) {
-  currentLang = lang;
+/* ================= LOAD FILES ================= */
+async function loadFiles() {
+  let res = await fetch(LIVE_URL, {
+    method: "POST",
+    body: JSON.stringify({ mode: "listFiles" })
+  });
 
-  document.getElementById("langEN").classList.remove("active");
-  document.getElementById("langML").classList.remove("active");
+  let data = await res.json();
+  let list = document.getElementById("fileList");
+  list.innerHTML = "";
 
-  if (lang === "en") {
-    document.getElementById("langEN").classList.add("active");
-  } else {
-    document.getElementById("langML").classList.add("active");
-  }
+  data.files.forEach(f => {
+    let opt = document.createElement("option");
+    opt.value = f.id;
+    opt.text = f.name;
+    list.appendChild(opt);
+  });
+
+  alert("Files loaded");
 }
 
-/* ✅ DESKTOP-SAFE AUTO ENGLISH → MALAYALAM */
-document.addEventListener("keyup", function (e) {
+/* ================= SELECT FILE ================= */
+async function selectFile() {
+  let list = document.getElementById("fileList");
+  if (!list.value) return alert("Select a file");
 
-  if (currentLang !== "ml") return;
-  if (e.target.tagName !== "INPUT") return;
-  if (e.target.type === "number") return;
+  currentSheetId = list.value;
 
-  let el = e.target;
-  let value = el.value;
+  let res = await fetch(LIVE_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      mode: "getLastSL",
+      sheetId: currentSheetId
+    })
+  });
 
-  let converted = Sanscript.t(value, "itrans", "malayalam");
-  el.value = converted;
-});
+  let data = await res.json();
+  autoSL = Number(data.lastSL) + 1;
 
-/* ================= CREATE CLUSTER ================= */
-async function createCluster() {
-  let name = document.getElementById("clusterName").value.trim();
-  let desc = document.getElementById("description").value.trim();
+  document.getElementById("slno").value = autoSL;
 
-  if (!name || !desc) {
-    alert("Enter both Cluster Name and Description");
-    return;
-  }
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("familyBox").style.display = "block";
+}
+
+/* ================= CREATE FILE ================= */
+async function createNewCluster() {
+
+  let name = document.getElementById("newCluster").value.trim();
+  if (!name) return alert("Enter cluster name");
 
   let res = await fetch(LIVE_URL, {
     method: "POST",
@@ -172,19 +160,21 @@ async function createCluster() {
   });
 
   let data = await res.json();
+
+  if (data.status === "EXISTS") {
+    alert("File already exists. Open it instead.");
+    return;
+  }
+
   currentSheetId = data.sheetId;
-
-  document.getElementById("clusterStatus").innerText =
-    "✅ New Google Sheet Created";
-
-  document.getElementById("clusterBox").style.display = "none";
-  document.getElementById("familyBox").style.display = "block";
-
   autoSL = 1;
   document.getElementById("slno").value = autoSL;
+
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("familyBox").style.display = "block";
 }
 
-/* ================= CREATE MEMBER INPUTS ================= */
+/* ================= CREATE MEMBERS ================= */
 function createMembers() {
   let count = document.getElementById("count").value;
   let box = document.getElementById("members");
@@ -192,72 +182,49 @@ function createMembers() {
 
   for (let i = 1; i <= count; i++) {
     box.innerHTML += `
-      <h3>Member ${i}</h3>
+      <h4>Member ${i}</h4>
+      <input placeholder="Name">
+      <input placeholder="Book No">
+      <input placeholder="Serial No">
 
-      <input type="text" placeholder="Name">
-      <input type="text" placeholder="Book No">
-      <input type="text" placeholder="Serial No">
-
-      <select>
-        <option value="">Religion</option>
-        <option>Hindu</option>
-        <option>Muslim</option>
-        <option>Christian</option>
-        <option>Others</option>
-      </select>
-
-      <select>
-        <option value="">Party</option>
-        <option>NDA</option>
-        <option>UDF</option>
-        <option>LDF</option>
-        <option>OTH</option>
-      </select>
-
-      <select>
-        <option value="">Active or Not Active</option>
-        <option>Active</option>
-        <option>Not Active</option>
-      </select>
-
+      <select><option>Hindu</option><option>Muslim</option><option>Christian</option><option>Others</option></select>
+      <select><option>NDA</option><option>UDF</option><option>LDF</option><option>OTH</option></select>
+      <select><option>Active</option><option>Not Active</option></select>
       <hr>
     `;
   }
 }
 
-/* ================= SAVE FAMILY LIVE ================= */
-function saveFamily() {
+/* ================= SAVE FAMILY ================= */
+async function saveFamily() {
 
   let house = document.getElementById("house").value;
   let count = document.getElementById("count").value;
-
-  let inputs = document.getElementById("members").getElementsByTagName("input");
-  let selects = document.getElementById("members").getElementsByTagName("select");
-
-  let slno = autoSL;
+  let inputs = document.querySelectorAll("#members input");
+  let selects = document.querySelectorAll("#members select");
   let s = 0;
 
   for (let i = 0; i < inputs.length; i += 3) {
 
-    let row = {
-      sheetId: currentSheetId,
-      slno: slno,
-      house: house,
-      count: count,
-      name: inputs[i].value,
-      book: inputs[i+1].value,
-      serial: inputs[i+2].value,
-      religion: selects[s*3].value,
-      party: selects[s*3 + 1].value,
-      active: selects[s*3 + 2].value,
-      showMain: s === 0
-    };
-
-    fetch(LIVE_URL, {
+    let res = await fetch(LIVE_URL, {
       method: "POST",
-      body: JSON.stringify(row)
+      body: JSON.stringify({
+        sheetId: currentSheetId,
+        slno: autoSL,
+        house: house,
+        count: count,
+        name: inputs[i].value,
+        book: inputs[i+1].value,
+        serial: inputs[i+2].value,
+        religion: selects[s*3].value,
+        party: selects[s*3+1].value,
+        active: selects[s*3+2].value,
+        showMain: s === 0
+      })
     });
 
+    let data = await res.json();
+    if (data.status !== "SAVED") return alert("Save failed! Check internet.");
     s++;
   }
 
@@ -268,20 +235,74 @@ function saveFamily() {
   document.getElementById("count").value = "";
   document.getElementById("house").value = "";
 
-  alert("Family Saved LIVE ✅");
+  alert("Family saved ✅");
 }
 
-/* ================= FINISH CLUSTER ================= */
-function finishCluster() {
+/* ================= FILTER ================= */
+function openFilter() {
+  document.getElementById("dashboard").style.display = "none";
+  document.getElementById("filterBox").style.display = "block";
+}
 
+async function applyFilter() {
+
+  let filters = {
+    house: document.getElementById("fHouse").value.trim(),
+    religion: document.getElementById("fReligion").value,
+    party: document.getElementById("fParty").value,
+    active: document.getElementById("fActive").value
+  };
+
+  let res = await fetch(LIVE_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      mode: "filter",
+      sheetId: currentSheetId,
+      filters: filters
+    })
+  });
+
+  let data = await res.json();
+  let box = document.getElementById("filterResults");
+
+  if (!data.data || data.data.length === 0) {
+    box.innerHTML = "<p>No records found.</p>";
+    return;
+  }
+
+  let html = `
+    <h3>Total Results: ${data.data.length}</h3>
+    <table>
+      <tr>
+        <th>SL</th><th>House</th><th>Name</th><th>Book</th>
+        <th>Serial</th><th>Religion</th><th>Party</th><th>Status</th>
+      </tr>
+  `;
+
+  data.data.forEach(r => {
+    html += `
+      <tr>
+        <td>${r.slno || ""}</td>
+        <td>${r.house || ""}</td>
+        <td>${r.name}</td>
+        <td>${r.book}</td>
+        <td>${r.serial}</td>
+        <td>${r.religion}</td>
+        <td>${r.party}</td>
+        <td>${r.active}</td>
+      </tr>
+    `;
+  });
+
+  html += "</table>";
+  box.innerHTML = html;
+}
+
+/* ================= BACK ================= */
+function backToDashboard() {
   document.getElementById("familyBox").style.display = "none";
-  document.getElementById("clusterBox").style.display = "block";
-
-  document.getElementById("clusterName").value = "";
-  document.getElementById("description").value = "";
-  document.getElementById("clusterStatus").innerText = "";
-
-  autoSL = 1;
+  document.getElementById("filterBox").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
 }
 </script>
 
