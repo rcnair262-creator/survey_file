@@ -4,44 +4,89 @@
   <title>Election Survey System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <script src="https://unpkg.com/sanscript@1.2.2/sanscript.min.js"></script>
-
   <style>
-    body { font-family: Arial; background: #eef2f3; padding: 20px; }
-    .box { background: #fff; padding: 20px; max-width: 1000px; margin: auto; border-radius: 10px; }
-    input, select, button { width: 100%; padding: 10px; margin: 7px 0; }
-    button { background: #2b7cff; color: white; border: none; border-radius: 6px; cursor: pointer; }
-    button.red { background: #d43b3b; }
-    hr { border: 1px dashed #aaa; margin: 10px 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #eef2f3;
+      padding: 20px;
+    }
 
-    table { width: 100%; border-collapse: collapse; }
-    table, th, td { border: 1px solid #999; }
-    th, td { padding: 7px; text-align: center; }
-    th { background: #eee; }
+    .box {
+      background: white;
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0;
+      border-radius: 6px;
+      border: 1px solid #aaa;
+      font-size: 15px;
+    }
+
+    button {
+      background: #2b7cff;
+      color: white;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button.red {
+      background: #d43b3b;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #999;
+      padding: 6px;
+      text-align: center;
+    }
+
+    th {
+      background: #f0f0f0;
+    }
   </style>
 </head>
 <body>
 
+<script>
+/* ✅ PASTE YOUR NEW WEB APP URL HERE */
+const LIVE_URL = "https://script.google.com/macros/s/AKfycbxsiECJkDUscrGRW5lp579YZZTYgpomb-mNR2s6Pt6XzhNy86EH0ogu9WLM5AByWwrkqw/exec";
+
+let currentSheetId = "";
+let autoSL = 1;
+</script>
+
+<!-- ================= DASHBOARD ================= -->
 <div class="box" id="dashboard">
   <h2>Cluster Dashboard</h2>
 
-  <button onclick="loadFiles()">🔄 Load Existing Files</button>
+  <button onclick="loadFiles()">Load Existing Files</button>
   <select id="fileList"></select>
-  <button onclick="selectFile()">✅ Open Selected File</button>
+  <button onclick="selectFile()">Open Selected File</button>
 
   <hr>
 
-  <h3>Create New Cluster</h3>
-  <input id="newCluster" placeholder="Cluster Name">
-  <button onclick="createNewCluster()">➕ Create New File</button>
+  <input id="newCluster" placeholder="New Cluster Name">
+  <button onclick="createNewCluster()">Create New File</button>
 
   <hr>
-
-  <button onclick="openFilter()">🔎 Advanced Filter</button>
+  <button onclick="openFilter()">Advanced Filter</button>
 </div>
 
+<!-- ================= FAMILY ENTRY ================= -->
 <div class="box" id="familyBox" style="display:none;">
-
   <h2>Family Entry</h2>
 
   <label>House Name</label>
@@ -55,52 +100,61 @@
 
   <div id="members"></div>
 
-  <button onclick="saveFamily()">💾 Save Family</button>
-  <button class="red" onclick="backToDashboard()">⬅ Back</button>
-
+  <button onclick="saveFamily()">Save Family</button>
+  <button class="red" onclick="backToDashboard()">Back</button>
 </div>
 
+<!-- ================= FILTER ================= -->
 <div class="box" id="filterBox" style="display:none;">
-  <h2>Advanced Filter</h2>
+  <h2>Filter & Summary</h2>
 
-  <input id="fHouse" placeholder="House (optional)">
-
-  <select id="fReligion">
-    <option value="">Any Religion</option>
-    <option>Hindu</option>
-    <option>Muslim</option>
-    <option>Christian</option>
-    <option>Others</option>
+  <select id="fActive">
+    <option value="">All Status</option>
+    <option>Active</option>
+    <option>Not Active</option>
   </select>
 
   <select id="fParty">
-    <option value="">Any Party</option>
+    <option value="">All Party</option>
     <option>NDA</option>
     <option>UDF</option>
     <option>LDF</option>
     <option>OTH</option>
   </select>
 
-  <select id="fActive">
-    <option value="">Any Status</option>
-    <option>Active</option>
-    <option>Not Active</option>
+  <select id="fReligion">
+    <option value="">All Religion</option>
+    <option>Hindu</option>
+    <option>Muslim</option>
+    <option>Christian</option>
+    <option>Others</option>
   </select>
 
-  <button onclick="applyFilter()">🔍 Apply Filter</button>
-  <button class="red" onclick="backToDashboard()">⬅ Back</button>
+  <input id="fBook" placeholder="Book No (optional)">
+  <input id="fSerial" placeholder="Serial No (optional)">
 
-  <hr>
+  <button onclick="applyFilter()">Apply Filter</button>
+  <button onclick="openExcel()">View in Excel</button>
+  <button onclick="downloadCSV()">Download Excel</button>
+  <button class="red" onclick="backToDashboard()">Back</button>
+
+  <div id="filterSummary" style="margin-top:10px;font-weight:bold;"></div>
   <div id="filterResults"></div>
 </div>
 
+<!-- ================= SCRIPT ================= -->
 <script>
-const LIVE_URL = "https://script.google.com/macros/s/AKfycbwOTke0ecgM4IY2BpL1lVXq1sSAFtyHmelZROpigysxuac4xEpva31c22IzwAjnE-s8/exec";
+function showPage(id) {
+  dashboard.style.display = "none";
+  familyBox.style.display = "none";
+  filterBox.style.display = "none";
+  document.getElementById(id).style.display = "block";
+}
 
-let currentSheetId = "";
-let autoSL = 1;
+function backToDashboard() {
+  showPage("dashboard");
+}
 
-/* ================= LOAD FILES ================= */
 async function loadFiles() {
   let res = await fetch(LIVE_URL, {
     method: "POST",
@@ -114,40 +168,27 @@ async function loadFiles() {
   data.files.forEach(f => {
     let opt = document.createElement("option");
     opt.value = f.id;
-    opt.text = f.name;
+    opt.textContent = f.name;
     list.appendChild(opt);
   });
-
-  alert("Files loaded");
 }
 
-/* ================= SELECT FILE ================= */
 async function selectFile() {
-  let list = document.getElementById("fileList");
-  if (!list.value) return alert("Select a file");
-
-  currentSheetId = list.value;
+  currentSheetId = document.getElementById("fileList").value;
+  if (!currentSheetId) return alert("Select a file");
 
   let res = await fetch(LIVE_URL, {
     method: "POST",
-    body: JSON.stringify({
-      mode: "getLastSL",
-      sheetId: currentSheetId
-    })
+    body: JSON.stringify({ mode: "getLastSL", sheetId: currentSheetId })
   });
 
   let data = await res.json();
   autoSL = Number(data.lastSL) + 1;
-
   document.getElementById("slno").value = autoSL;
-
-  document.getElementById("dashboard").style.display = "none";
-  document.getElementById("familyBox").style.display = "block";
+  showPage("familyBox");
 }
 
-/* ================= CREATE FILE ================= */
 async function createNewCluster() {
-
   let name = document.getElementById("newCluster").value.trim();
   if (!name) return alert("Enter cluster name");
 
@@ -161,22 +202,16 @@ async function createNewCluster() {
 
   let data = await res.json();
 
-  if (data.status === "EXISTS") {
-    alert("File already exists. Open it instead.");
-    return;
-  }
+  if (data.status === "EXISTS") return alert("File already exists");
 
   currentSheetId = data.sheetId;
   autoSL = 1;
   document.getElementById("slno").value = autoSL;
-
-  document.getElementById("dashboard").style.display = "none";
-  document.getElementById("familyBox").style.display = "block";
+  showPage("familyBox");
 }
 
-/* ================= CREATE MEMBERS ================= */
 function createMembers() {
-  let count = document.getElementById("count").value;
+  let count = Number(document.getElementById("count").value);
   let box = document.getElementById("members");
   box.innerHTML = "";
 
@@ -187,26 +222,40 @@ function createMembers() {
       <input placeholder="Book No">
       <input placeholder="Serial No">
 
-      <select><option>Hindu</option><option>Muslim</option><option>Christian</option><option>Others</option></select>
-      <select><option>NDA</option><option>UDF</option><option>LDF</option><option>OTH</option></select>
-      <select><option>Active</option><option>Not Active</option></select>
+      <select>
+        <option>Hindu</option>
+        <option>Muslim</option>
+        <option>Christian</option>
+        <option>Others</option>
+      </select>
+
+      <select>
+        <option>NDA</option>
+        <option>UDF</option>
+        <option>LDF</option>
+        <option>OTH</option>
+      </select>
+
+      <select>
+        <option>Active</option>
+        <option>Not Active</option>
+      </select>
       <hr>
     `;
   }
 }
 
-/* ================= SAVE FAMILY ================= */
 async function saveFamily() {
-
   let house = document.getElementById("house").value;
-  let count = document.getElementById("count").value;
+  let count = Number(document.getElementById("count").value);
+
   let inputs = document.querySelectorAll("#members input");
   let selects = document.querySelectorAll("#members select");
+
   let s = 0;
 
   for (let i = 0; i < inputs.length; i += 3) {
-
-    let res = await fetch(LIVE_URL, {
+    await fetch(LIVE_URL, {
       method: "POST",
       body: JSON.stringify({
         sheetId: currentSheetId,
@@ -214,43 +263,37 @@ async function saveFamily() {
         house: house,
         count: count,
         name: inputs[i].value,
-        book: inputs[i+1].value,
-        serial: inputs[i+2].value,
-        religion: selects[s*3].value,
-        party: selects[s*3+1].value,
-        active: selects[s*3+2].value,
+        book: inputs[i + 1].value,
+        serial: inputs[i + 2].value,
+        religion: selects[s * 3].value,
+        party: selects[s * 3 + 1].value,
+        active: selects[s * 3 + 2].value,
         showMain: s === 0
       })
     });
-
-    let data = await res.json();
-    if (data.status !== "SAVED") return alert("Save failed! Check internet.");
     s++;
   }
 
   autoSL++;
   document.getElementById("slno").value = autoSL;
-
   document.getElementById("members").innerHTML = "";
   document.getElementById("count").value = "";
   document.getElementById("house").value = "";
 
-  alert("Family saved ✅");
+  alert("Saved Successfully");
 }
 
-/* ================= FILTER ================= */
 function openFilter() {
-  document.getElementById("dashboard").style.display = "none";
-  document.getElementById("filterBox").style.display = "block";
+  showPage("filterBox");
 }
 
 async function applyFilter() {
-
   let filters = {
-    house: document.getElementById("fHouse").value.trim(),
-    religion: document.getElementById("fReligion").value,
-    party: document.getElementById("fParty").value,
-    active: document.getElementById("fActive").value
+    active: fActive.value,
+    party: fParty.value,
+    religion: fReligion.value,
+    book: fBook.value.trim(),
+    serial: fSerial.value.trim()
   };
 
   let res = await fetch(LIVE_URL, {
@@ -263,46 +306,55 @@ async function applyFilter() {
   });
 
   let data = await res.json();
-  let box = document.getElementById("filterResults");
 
-  if (!data.data || data.data.length === 0) {
-    box.innerHTML = "<p>No records found.</p>";
-    return;
-  }
-
-  let html = `
-    <h3>Total Results: ${data.data.length}</h3>
-    <table>
-      <tr>
-        <th>SL</th><th>House</th><th>Name</th><th>Book</th>
-        <th>Serial</th><th>Religion</th><th>Party</th><th>Status</th>
-      </tr>
+  filterSummary.innerHTML = `
+    Total: ${data.summary.total} |
+    Active: ${data.summary.active} |
+    Not Active: ${data.summary.notActive} |
+    NDA: ${data.summary.party.NDA},
+    UDF: ${data.summary.party.UDF},
+    LDF: ${data.summary.party.LDF},
+    OTH: ${data.summary.party.OTH}
   `;
 
+  let html = `<table>
+  <tr>
+    <th>SL</th><th>House</th><th>Name</th>
+    <th>Book</th><th>Serial</th>
+    <th>Religion</th><th>Party</th><th>Status</th>
+  </tr>`;
+
   data.data.forEach(r => {
-    html += `
-      <tr>
-        <td>${r.slno || ""}</td>
-        <td>${r.house || ""}</td>
-        <td>${r.name}</td>
-        <td>${r.book}</td>
-        <td>${r.serial}</td>
-        <td>${r.religion}</td>
-        <td>${r.party}</td>
-        <td>${r.active}</td>
-      </tr>
-    `;
+    html += `<tr>
+      <td>${r.slno}</td>
+      <td>${r.house}</td>
+      <td>${r.name}</td>
+      <td>${r.book}</td>
+      <td>${r.serial}</td>
+      <td>${r.religion}</td>
+      <td>${r.party}</td>
+      <td>${r.active}</td>
+    </tr>`;
   });
 
   html += "</table>";
-  box.innerHTML = html;
+  filterResults.innerHTML = html;
 }
 
-/* ================= BACK ================= */
-function backToDashboard() {
-  document.getElementById("familyBox").style.display = "none";
-  document.getElementById("filterBox").style.display = "none";
-  document.getElementById("dashboard").style.display = "block";
+function openExcel() {
+  window.open(
+    "https://docs.google.com/spreadsheets/d/" + currentSheetId,
+    "_blank"
+  );
+}
+
+function downloadCSV() {
+  window.open(
+    "https://docs.google.com/spreadsheets/d/" +
+    currentSheetId +
+    "/export?format=csv",
+    "_blank"
+  );
 }
 </script>
 
