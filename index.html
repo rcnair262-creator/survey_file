@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Election Survey</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="data:,">
+
+  <!-- ✅ DESKTOP-SAFE TRANSLITERATION LIBRARY -->
+  <script src="https://unpkg.com/sanscript@1.2.2/sanscript.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #eef2f3;
+      padding: 20px;
+    }
+    .box {
+      background: #fff;
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #ccc;
+    }
+    h2 { text-align: center; }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+      font-size: 15px;
+    }
+
+    button {
+      background: #2b7cff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button.red {
+      background: #d93b3b;
+    }
+
+    hr {
+      border: 1px dashed #999;
+      margin: 12px 0;
+    }
+
+    .lang-btn {
+      padding: 6px 16px;
+      font-size: 14px;
+      background: #777;
+      color: white;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      margin: 0 5px;
+      width: auto;
+    }
+
+    .lang-btn.active {
+      background: #2b7cff;
+    }
+
+    .lang-bar {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ✅ GLOBAL LANGUAGE SWITCH -->
+<div class="lang-bar">
+  <button type="button" id="langEN" class="lang-btn active" onclick="setGlobalLang('en')">EN</button>
+  <button type="button" id="langML" class="lang-btn" onclick="setGlobalLang('ml')">മലയാളം</button>
+</div>
+
+<!-- ================= CLUSTER PAGE ================= -->
+<div class="box" id="clusterBox">
+
+  <h2>Create New Cluster (New File)</h2>
+
+  <label>Cluster / File Name</label>
+  <input id="clusterName" type="text">
+
+  <label>Description</label>
+  <input id="description" type="text">
+
+  <button onclick="createCluster()">Create Cluster</button>
+
+  <p id="clusterStatus"></p>
+
+</div>
+
+<!-- ================= FAMILY PAGE ================= -->
+<div class="box" id="familyBox" style="display:none;">
+
+  <h2>Enter Family Data</h2>
+
+  <label>House Name</label>
+  <input id="house" type="text">
+
+  <label>Eligible Members Count</label>
+  <input type="number" id="count" onchange="createMembers()">
+
+  <label>SL No (Auto)</label>
+  <input id="slno" readonly style="background:#ffe;">
+
+  <div id="members"></div>
+
+  <button onclick="saveFamily()">Save Family (LIVE)</button>
+  <button class="red" onclick="finishCluster()">Finish Cluster</button>
+
+</div>
+
+<script>
+let autoSL = 1;
+let currentSheetId = "";
+
+/* ✅ PASTE YOUR REAL GOOGLE WEB APP URL BELOW */
+const LIVE_URL = "https://script.google.com/macros/s/AKfycbwOTke0ecgM4IY2BpL1lVXq1sSAFtyHmelZROpigysxuac4xEpva31c22IzwAjnE-s8/exec";
+
+/* ================= GLOBAL LANGUAGE SWITCH ================= */
+let currentLang = "en";
+
+function setGlobalLang(lang) {
+  currentLang = lang;
+
+  document.getElementById("langEN").classList.remove("active");
+  document.getElementById("langML").classList.remove("active");
+
+  if (lang === "en") {
+    document.getElementById("langEN").classList.add("active");
+  } else {
+    document.getElementById("langML").classList.add("active");
+  }
+}
+
+/* ✅ DESKTOP-SAFE AUTO ENGLISH → MALAYALAM */
+document.addEventListener("keyup", function (e) {
+
+  if (currentLang !== "ml") return;
+  if (e.target.tagName !== "INPUT") return;
+  if (e.target.type === "number") return;
+
+  let el = e.target;
+  let value = el.value;
+
+  let converted = Sanscript.t(value, "itrans", "malayalam");
+  el.value = converted;
+});
+
+/* ================= CREATE CLUSTER ================= */
+async function createCluster() {
+  let name = document.getElementById("clusterName").value.trim();
+  let desc = document.getElementById("description").value.trim();
+
+  if (!name || !desc) {
+    alert("Enter both Cluster Name and Description");
+    return;
+  }
+
+  let res = await fetch(LIVE_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      mode: "createFile",
+      clusterName: name
+    })
+  });
+
+  let data = await res.json();
+  currentSheetId = data.sheetId;
+
+  document.getElementById("clusterStatus").innerText =
+    "✅ New Google Sheet Created";
+
+  document.getElementById("clusterBox").style.display = "none";
+  document.getElementById("familyBox").style.display = "block";
+
+  autoSL = 1;
+  document.getElementById("slno").value = autoSL;
+}
+
+/* ================= CREATE MEMBER INPUTS ================= */
+function createMembers() {
+  let count = document.getElementById("count").value;
+  let box = document.getElementById("members");
+  box.innerHTML = "";
+
+  for (let i = 1; i <= count; i++) {
+    box.innerHTML += `
+      <h3>Member ${i}</h3>
+
+      <input type="text" placeholder="Name">
+      <input type="text" placeholder="Book No">
+      <input type="text" placeholder="Serial No">
+
+      <select>
+        <option value="">Religion</option>
+        <option>Hindu</option>
+        <option>Muslim</option>
+        <option>Christian</option>
+        <option>Others</option>
+      </select>
+
+      <select>
+        <option value="">Party</option>
+        <option>NDA</option>
+        <option>UDF</option>
+        <option>LDF</option>
+        <option>OTH</option>
+      </select>
+
+      <select>
+        <option value="">Active or Not Active</option>
+        <option>Active</option>
+        <option>Not Active</option>
+      </select>
+
+      <hr>
+    `;
+  }
+}
+
+/* ================= SAVE FAMILY LIVE ================= */
+function saveFamily() {
+
+  let house = document.getElementById("house").value;
+  let count = document.getElementById("count").value;
+
+  let inputs = document.getElementById("members").getElementsByTagName("input");
+  let selects = document.getElementById("members").getElementsByTagName("select");
+
+  let slno = autoSL;
+  let s = 0;
+
+  for (let i = 0; i < inputs.length; i += 3) {
+
+    let row = {
+      sheetId: currentSheetId,
+      slno: slno,
+      house: house,
+      count: count,
+      name: inputs[i].value,
+      book: inputs[i+1].value,
+      serial: inputs[i+2].value,
+      religion: selects[s*3].value,
+      party: selects[s*3 + 1].value,
+      active: selects[s*3 + 2].value,
+      showMain: s === 0
+    };
+
+    fetch(LIVE_URL, {
+      method: "POST",
+      body: JSON.stringify(row)
+    });
+
+    s++;
+  }
+
+  autoSL++;
+  document.getElementById("slno").value = autoSL;
+
+  document.getElementById("members").innerHTML = "";
+  document.getElementById("count").value = "";
+  document.getElementById("house").value = "";
+
+  alert("Family Saved LIVE ✅");
+}
+
+/* ================= FINISH CLUSTER ================= */
+function finishCluster() {
+
+  document.getElementById("familyBox").style.display = "none";
+  document.getElementById("clusterBox").style.display = "block";
+
+  document.getElementById("clusterName").value = "";
+  document.getElementById("description").value = "";
+  document.getElementById("clusterStatus").innerText = "";
+
+  autoSL = 1;
+}
+</script>
+
+</body>
+</html>
